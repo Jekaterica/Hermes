@@ -1,14 +1,14 @@
 ---
 name: business-agent-architect
 description: "Архитектура и разработка production-grade бизнес-агентов для малого бизнеса. Автоматизация рутины: модерация соцсетей, поддержка клиентов на сайте, CRM, запись, напоминания. Крым-специфика."
-version: 1.0.0
+version: 1.1.0
 author: Oleg (Smarta architect)
 license: MIT
 platforms: [linux]
 metadata:
   hermes:
     tags: [business, agent-architecture, small-business, automation, russia, crimea]
-    related_skills: [writing-plans, test-driven-development]
+    related_skills: [writing-plans, test-driven-development, cognitive-interaction-model]
 ---
 
 # Business Agent Architect
@@ -214,6 +214,36 @@ MINIMAL_TRANSITIONS = [
 | 3 (бизнес) | Уровень 2 + работа с заказами, CRM, запись | 40 000 - 80 000 | 5 000 - 10 000 |
 | 4 (полный) | Весь бизнес-процесс + интеграции | 80 000 - 150 000 | 10 000 - 20 000 |
 
+## File-based project memory (HERMES.md)
+
+Каждый проект агента должен содержать `HERMES.md` в корне — файл памяти для ассистента,
+чтобы при старте сессии сразу войти в контекст без потери деталей.
+
+Структура HERMES.md:
+```markdown
+# HERMES.md — [Имя проекта]
+
+## Цель
+[Одним абзацем: что делает этот агент, уровень]
+
+## Архитектурные решения
+- [ключевое решение 1]
+- [ключевое решение 2]
+
+## Статус
+✅ [что готово]
+⬜ [что осталось]
+
+## Открытые вопросы
+- [вопрос 1]
+- [вопрос 2]
+```
+
+**Когда читать:** в начале каждой сессии, если упоминается проект.
+**Когда обновлять:** при изменении архитектурных решений, статуса, открытых вопросов.
+**Не хранить:** логи, ошибки, временные заметки — для этого есть Decision Journal
+(см. skill `cognitive-interaction-model`).
+
 ## Версионирование проектов (Git + бэкап)
 
 **Правила для проектов агентов:**
@@ -295,3 +325,4 @@ MINIMAL_TRANSITIONS = [
 - OpenClaw — gateway для агентов
 - TGB-Booking (GitHub) — готовый MVP бота записи для салонов
 - AiogramBotTemplate (GitHub, ⭐128) — production шаблон бота
+- `cognitive-interaction-model` — CIM для оптимизации агент-пользователь отношений

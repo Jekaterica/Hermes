@@ -1,7 +1,7 @@
 ---
 name: agent-architecture-audit
 description: "Audit, diagnose and redesign existing AI agents: find common antipatterns, consolidate skill bloat, add real tools, escalation rules, and adaptive output formats."
-version: 1.0.0
+version: 1.1.0
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos]
@@ -141,6 +141,11 @@ Priority order:
 3. Skill bloat gap (quality-critical)
 4. Output rigidity gap (usability-critical)
 5. Feedback loop gap (growth-critical)
+6. **For crisis/survival agents specifically:**
+   - Escalation → #1 always
+   - **Follow-up loop (Commitment Protocol)** → #2 — agent must track whether advice was followed and log outcomes
+   - Toolization → #3
+   - Compression First → #4 — startup lines matter; delete fluff files (SOUL.md, etc.)
 ```
 
 ### Phase 4: Implementation
@@ -162,8 +167,18 @@ Priority order:
 | **Toy knowledge base** | 40 book titles, zero content from any of them. LLM needs read the books to use them. | Replace titles with extracted concepts, quotes, and practical applications. |
 | **Static memory** | MEMORY.md written by the user, never updated by the agent. | Add memory management script + instructions to write after each meaningful interaction. |
 | **Uniform voice** | Agent talks the same way to a suicidal user and a curious prospect. | Add state-dependent tone and format rules. |
-| **No forbidden list** | Agent can recommend anything. | Add explicit forbidden section per skill. Include real-world dangerous patterns. |
+| No forbidden list | Agent can recommend anything. | Add explicit forbidden section per skill. Include real-world dangerous patterns. |
+| **Empty memory infrastructure** | MEMORY.md exists but is a template — no data ever written. Memory manager scripts exist but never called. | Add a startup instruction: 'Write at least one observation after each meaningful session.' Scripts without data are theater. |
+| **Fluff files** | SOUL.md, STYLE.md, PERSONALITY.md — poetic files with zero operational value. 24 lines that distill to 'be helpful'. | Delete. Merge any unique content into IDENTITY.md (3-5 lines max). Every file on startup costs tokens. |
+| **Duplicated core instructions** | SYSTEM_PROMPT.md and execution-engine.md both define output format identically. Two sources of truth. | Consolidate into one. Remove format from execution-engine, keep only unique parts (action algorithm, escalation). |
+| **No follow-up loop** | Agent gives advice, never checks if followed. For crisis/survival agents this is critical — user needs accountability. | Add Commitment Protocol: record user's commitment, check next session, log outcome. |
 | **Fantasy infrastructure** | "Check API", "query database", "send notification" — but no actual connection. | Either implement the tool or replace with "recommend the user to check manually via [platform URL]". |
+
+## Overlap Notice
+
+**This skill (`agent-architecture-audit`) overlaps significantly with `agent-architecture-review`.** The two cover the same class of work (auditing existing agents). The curator should consolidate them: keep the more complete version, merge the missing pieces from the other, delete the surplus.
+
+**This skill (`agent-architecture-audit`) also overlaps with `cognitive-interaction-model`** on the feedback-loop and learning dimensions. CIM covers the ongoing relationship optimization; audit covers the initial structural fix. Clear boundary: audit = one-time fix, CIM = ongoing.
 
 ## Verification Checklist
 

@@ -1,13 +1,13 @@
 ---
 name: github-auth
 description: "GitHub auth setup: HTTPS tokens, SSH keys, gh CLI login."
-version: 1.1.0
+version: 1.2.0
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
 metadata:
   hermes:
-    tags: [GitHub, Authentication, Git, gh-cli, SSH, Setup]
+    tags: [GitHub, Authentication, Git, gh-cli, SSH, Setup, Sanctions]
     related_skills: [github-pr-workflow, github-code-review, github-issues, github-repo-management]
 ---
 
@@ -207,7 +207,7 @@ If git credentials are already configured (via credential.helper store), the tok
 
 ```bash
 # Read from git credential store
-grep "github.com" ~/.git-credentials 2>/dev/null | head -1 | sed 's|https://[^:]*:\([^@]*\)@.*|\1|'
+grep "github.com" ~/.git-credentials 2>/dev/null | head -1 | sed 's|https://[^:]*:\\([^@]*\\)@.*|\\1|'
 ```
 
 ### Helper: Detect Auth Method
@@ -221,10 +221,10 @@ if command -v gh &>/dev/null && gh auth status &>/dev/null; then
 elif [ -n "$GITHUB_TOKEN" ]; then
   echo "AUTH_METHOD=curl"
 elif [ -f ~/.hermes/.env ] && grep -q "^GITHUB_TOKEN=" ~/.hermes/.env; then
-  export GITHUB_TOKEN=$(grep "^GITHUB_TOKEN=" ~/.hermes/.env | head -1 | cut -d= -f2 | tr -d '\n\r')
+  export GITHUB_TOKEN=$(grep "^GITHUB_TOKEN=" ~/.hermes/.env | head -1 | cut -d= -f2 | tr -d '\\n\\r')
   echo "AUTH_METHOD=curl"
 elif grep -q "github.com" ~/.git-credentials 2>/dev/null; then
-  export GITHUB_TOKEN=$(grep "github.com" ~/.git-credentials | head -1 | sed 's|https://[^:]*:\([^@]*\)@.*|\1|')
+  export GITHUB_TOKEN=$(grep "github.com" ~/.git-credentials | head -1 | sed 's|https://[^:]*:\\([^@]*\\)@.*|\\1|')
   echo "AUTH_METHOD=curl"
 else
   echo "AUTH_METHOD=none"
@@ -245,3 +245,13 @@ fi
 | Credentials not persisting | Check `git config --global credential.helper` — must be `store` or `cache` |
 | Multiple GitHub accounts | Use SSH with different keys per host alias in `~/.ssh/config`, or per-repo credential URLs |
 | `gh: command not found` + no sudo | Use git-only Method 1 above — no installation needed |
+
+## Sanctioned Regions
+
+If the account is registered in a sanctioned region (Crimea, Cuba, Iran, North Korea, Syria):
+
+- **Private repos are blocked** — only public repos available. Create them manually at https://github.com/new — API creation also blocked.
+- **All token types may fail** for write operations — even classic PATs (`ghp_...`) return `Bad credentials` or `Invalid username or token`. This is a server-side block, not a misconfiguration.
+- **SSH is the only reliable transport** — generate a keypair, add the public key at https://github.com/settings/keys, and use `git@github.com:` remote URLs.
+- **GitHub CLI (`gh`) cannot be installed** on many restricted VPSes — stick with `git` + SSH.
+- **File:** `references/sanctioned-regions.md` has the full step-by-step workflow including creating repos, generating keys, handling `known_hosts`, and cron-safe configuration.
