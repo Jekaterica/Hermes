@@ -1,7 +1,7 @@
 ---
 name: business-agent-architect
 description: "Архитектура и разработка production-grade бизнес-агентов для малого бизнеса. Автоматизация рутины: модерация соцсетей, поддержка клиентов на сайте, CRM, запись, напоминания. Крым-специфика."
-version: 1.1.0
+version: 1.2.0
 author: Oleg (Smarta architect)
 license: MIT
 platforms: [linux]
@@ -213,6 +213,92 @@ MINIMAL_TRANSITIONS = [
 | 2 (рутина) | Уровень 1 + модерация соцсетей, простая поддержка | 15 000 - 40 000 | 3 000 - 5 000 |
 | 3 (бизнес) | Уровень 2 + работа с заказами, CRM, запись | 40 000 - 80 000 | 5 000 - 10 000 |
 | 4 (полный) | Весь бизнес-процесс + интеграции | 80 000 - 150 000 | 10 000 - 20 000 |
+
+## Runtime Decision: Hermes vs smolagents vs CrewAI
+
+Для каждого клиентского проекта выбирай рантайм под задачу, а не под «что знаю лучше».
+
+| Критерий | smolagents | Hermes Agent | CrewAI |
+|----------|-----------|-------------|--------|
+| **Когда брать** | Простые агенты (FAQ, модерация, 1-2 функции) | Сложные агенты (CRM+email+расписания, мультиплатформа) | Не брать |
+| **Деплой** | HF Space (1 кнопка) | VPS (systemd / Docker) | Требует CrewAI runtime |
+| **Время создания** | 20 минут | 2-4 часа (через шаблон) | ~как Hermes |
+| **Стек** | pip install smolagents + CodeAgent | Весь Hermes (skills, cron, gateway) | pip install crewai + langchain |
+| **Порог для клиента** | Минимальный | Средний | Выше |
+
+**Правило:** Клиент не видит разницы между рантаймами — он видит интерфейс (Telegram) и ответы. Выбирай smolagents для быстрых дешёвых агентов (уровень 1-2), Hermes для сложных (уровень 3-4). CrewAI **не использовать** — конвертировать паттерны в Hermes skill (см. раздел «Конвертация из crewAI»).
+
+## Конвертация из crewAI в Hermes skill
+
+crewAI-примеры — источник **идей и логики**, а не кода. Не ставь crewAI, конвертируй паттерн:
+
+1. Каждый `Agent` в crewAI = шаг пайплайна (stage) внутри одного Hermes skill
+2. `Task` = prompt для этого шага (system + expected_output)
+3. `Tool` = Hermes-эквивалент (search → web_search, file → read_file)
+4. `Crew(process=sequential)` = последовательность LLM-вызовов с передачей контекста
+5. `Crew(process=hierarchical)` = делегирование суб-скиллам через delegate_task
+
+```python
+# Вместо: crewAI с 3 агентами
+# Делаем: 3 последовательных шага в одном skill
+async def pipeline(input_data):
+    # Step 1: classify
+    result1 = await llm_call(system="классифицируй...", messages=[...])
+    # Step 2: analyze (использует output step1)
+    result2 = await llm_call(system="проанализируй...", messages=[result1])
+    # Step 3: generate (использует outputs step1+step2)
+    result3 = await llm_call(system="сгенерируй...", messages=[result1, result2])
+    return result3
+```
+
+**Готовые конвертации (лежат в Hermes skills/business/):**
+- `email-auto-responder` — из crewAI email_auto_responder_flow (Classify → Analyze → Draft)
+- `sales-knowledge-rag` — RAG-база по 5 книгам продаж (SPIN, Fanatical Prospecting, Predictable Revenue, Conversion Code, StoryBrand). Файлы: `/home/oleg/agents/business-knowledge/sales-scripts/`
+- `open-notebook-rag` — интеграция с Open Notebook (векторный поиск по документам клиентов)
+- Больше в процессе — смотри также Antigravity Awesome Skills (1525 SKILL.md совместимых навыков)
+
+## RAG + База знаний (Open Notebook)
+
+Для агентов, которые должны отвечать на основе документов, используй **Open Notebook**:
+
+- **Запуск:** Docker Compose (`/home/oleg/open-notebook/docker-compose.yml`)
+- **API:** `http://localhost:5055`
+- **UI:** `http://localhost:8502`
+- **Стек:** FastAPI + SurrealDB (векторный поиск) + LangGraph workflow
+- **Поиск:** `POST /api/search` (query + notebook_id + limit → чанки)
+- **Вопрос:** `POST /api/search/ask` (question + model → ответ с цитатами)
+
+Интеграция через skill `open-notebook-rag` (mlops). Поддерживает PDF, URL, аудио, текст.
+
+**6 правил анти-галлюцинации для RAG:**
+1. Retrieve first, answer second — всегда сначала поиск
+2. Не разбивай семантические блоки документов
+3. Используй document embeddings для сохранения структуры
+4. Проверяй релевантность найденных чанков
+5. Настрой порог семантического поиска под домен
+6. RAG + память = «второй мозг»
+
+## Guardrails (защита агента)
+
+Три слоя защиты, реализованы в skill `agent-guardrails` (mlops):
+
+1. **Input Guard** — валидация входа: PII, токсичность, off-topic
+2. **Output Guard** — верификация ответа: галлюцинации, тон, compliance
+3. **Business Guard** — доменные правила: allowed/blocked topics, эскалация
+
+Для простых агентов достаточно бизнес-правил в system prompt.
+Для production-агентов (уровень 3-4) — все три слоя.
+
+## Источники готовых навыков для клиентов
+
+Помимо написания с нуля, готовые навыки можно брать из:
+
+1. **Antigravity Awesome Skills** — `/home/oleg/antigravity-skills/` (1525 SKILL.md, прямо совместимы с Hermes)
+2. **Everything Claude Code** — `/home/oleg/everything-claude-code/` (9 агентов, eval-harness)
+3. **n8n Templates** — `/home/oleg/n8n-templates/` (70+ AI workflow паттернов)
+4. **crewAI-examples** — `/home/oleg/crewAI-examples/` (паттерны, конвертировать)
+
+Все установлены локально — `/home/oleg/` — можно копировать и адаптировать.
 
 ## File-based project memory (HERMES.md)
 

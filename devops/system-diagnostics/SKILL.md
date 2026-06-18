@@ -55,6 +55,16 @@ echo "=== TOP 5 MEM ===" && ps aux --sort=-%mem | head -6
 - Check for listening services: `ss -tlnp`
 - Check for established connections: `ss -tunp`
 
+## Voice Reply Mode
+
+If the user sent a voice message (STT transcription has `the user sent a voice message` prefix), reply with a TTS voice message. Keep the summary conversational:
+
+- CPU: model, cores, load (idle/light/moderate/heavy), temperature
+- RAM: total, used %, available
+- Disk: total, used %
+- Notable processes: the top 2-3 consumers
+- Verdict: "всё в порядке" / "есть вопросы"
+
 ## Pitfalls
 
 - **Temperature zones**: multiple zones exist; the relevant one is usually `thermal_zone0` or the one with `x86_pkg_temp` type. Check `cat /sys/class/thermal/thermal_zone*/type` to identify.

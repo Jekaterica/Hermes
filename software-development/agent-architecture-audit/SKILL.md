@@ -172,13 +172,7 @@ Priority order:
 | **Fluff files** | SOUL.md, STYLE.md, PERSONALITY.md — poetic files with zero operational value. 24 lines that distill to 'be helpful'. | Delete. Merge any unique content into IDENTITY.md (3-5 lines max). Every file on startup costs tokens. |
 | **Duplicated core instructions** | SYSTEM_PROMPT.md and execution-engine.md both define output format identically. Two sources of truth. | Consolidate into one. Remove format from execution-engine, keep only unique parts (action algorithm, escalation). |
 | **No follow-up loop** | Agent gives advice, never checks if followed. For crisis/survival agents this is critical — user needs accountability. | Add Commitment Protocol: record user's commitment, check next session, log outcome. |
-| **Fantasy infrastructure** | "Check API", "query database", "send notification" — but no actual connection. | Either implement the tool or replace with "recommend the user to check manually via [platform URL]". |
-
-## Overlap Notice
-
-**This skill (`agent-architecture-audit`) overlaps significantly with `agent-architecture-review`.** The two cover the same class of work (auditing existing agents). The curator should consolidate them: keep the more complete version, merge the missing pieces from the other, delete the surplus.
-
-**This skill (`agent-architecture-audit`) also overlaps with `cognitive-interaction-model`** on the feedback-loop and learning dimensions. CIM covers the ongoing relationship optimization; audit covers the initial structural fix. Clear boundary: audit = one-time fix, CIM = ongoing.
+| **Fantasy infrastructure** | "Check API", "query database", "send notification" — but no actual connection. (Also known as **"100% prompt, 0% code"** — the agent is a talker, not a doer.) | Either implement the tool or replace with "recommend the user to check manually via [platform URL]". |
 
 ## Verification Checklist
 
@@ -192,6 +186,29 @@ After redesign, verify:
 - [ ] Knowledge base has actual content, not just references
 - [ ] Startup instructions tell the agent what to load and what to defer
 - [ ] Agent knows its own boundaries and when to say "I can't help here"
+
+## Appendix: Russian-Language Agents
+
+When auditing agents for Russian-speaking users, check these region-specific concerns:
+
+### РФ Legal & Regulatory Knowledge
+- Verify РФ-specific laws: ТК РФ, 127-ФЗ (банкротство), 353-ФЗ (МФО)
+- Verify РФ platforms: hh.ru, ФССП, Госуслуги, Авито, YouDo
+- Watch for: "американские" схемы and non-functional РФ platforms
+- Крипта/трейдинг as primary income — 97% lose money; disable
+- Инфоцыганщина — specific РФ phenomenon; block in knowledge base
+
+### РФ Platform Integration
+- Job search: hh.ru, Авито Услуги, YouDo, Профи.ру
+- Government: Госуслуги, ФНС, ФССП
+- Legal: КонсультантПлюс, Гарант (or their public excerpts)
+- ВТБ/Сбер/Т-Банк APIs only via official channels
+
+### РФ Communication Style
+- Formal register preferred unless relationship is established
+- Avoiding English business models that don't apply in Russia
+- Cold analytics, professional tone, no motivational fluff
+- Direct problem-solving over conversational niceties
 
 ## User-Specific Preferences (this user)
 
