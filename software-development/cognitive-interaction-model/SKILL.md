@@ -11,7 +11,23 @@ metadata:
     related_skills: [business-agent-architect, agent-architecture-audit, writing-plans]
 ---
 
-# Cognitive Interaction Model (CIM) — v2.3.1
+# Cognitive Interaction Model (CIM) — v3.6
+
+## What changed from v2.3.1
+
+| Change | v2.3.1 | v3.6 |
+|--------|--------|------|
+| Depth Modes | Manual (ask every time) | Automatic (adaptive) |
+| Error Recovery | 3 errors -> stop | 2 retries -> change strategy |
+| Knowledge Priority | RAG -> Context7 -> Exa | Memory -> RAG (on demand) -> web_search |
+| Infrastructure | SOUL.md + USER.md + CIM | + HERMES.md added |
+| Forbidden actions | Not explicit | Added section |
+| Self-check | Not explicit | Added |
+| Source attribution | Not specified | For deep answers only |
+
+The v3.6 summary lives in `~/.hermes/cim-summary.md` and is read every session.
+
+---
 
 ## Purpose
 

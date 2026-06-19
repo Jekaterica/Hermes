@@ -80,6 +80,7 @@ Goal-First > process. Execution > analysis. Простота > сложност�
 - USER.md originally had "3 одинаковые ошибки → стоп метод"
 - System prompt v3.6 proposed "1 retry → смена стратегии"
 - **Compromise: 2 retries → смена стратегии** — enough for flaky operations (builds, installs), not so many that the agent loops.
+- Applied: `~/.hermes/memories/USER.md` and `~/.hermes/hermes-config/cim-summary.md`
 
 ## Skills Audit & Pruning
 
@@ -105,6 +106,153 @@ When the skills library has grown to 100+ entries, the `<available_skills>` bloc
 ### When to Load Archived Skills
 Use `skill_view(name)` or `/skill <name>` on demand. The archive preserves full structure — no data loss.
 
+## Skills Organization: Core + Vault + Catalog
+
+Beyond simple pruning, skills can be organized into three tiers to minimize token waste while preserving full capability:
+
+### Tier 1 — Core (in `~/.hermes/skills/`, always in context)
+Skills for thinking, planning, architecture, debugging, and self-correction that are used in >50% of sessions:
+- architect, planner, writing-plans, spike, architecture-decision-records
+- cognitive-interaction-model (CIM)
+- business-agent-architect, business-knowledge-engineering
+- systematic-debugging, code-reviewer, security-reviewer, requesting-code-review
+- hermes-agent, skill-evolution, hermes-agent-skill-authoring
+- system-diagnostics, python-debugpy, node-inspect-debugger
+
+~20 skills, ~500 tokens in the `<available_skills>` block.
+
+### Tier 2 — Vault (in `~/.hermes/skills-vault/`, loaded on demand)
+Domain-specific skills used in <15% of sessions. Moved out of `skills/` to keep the context block small:
+- GitHub (6): pr-workflow, repo-management, issues, code-review, auth, codebase-inspection
+- Productivity (5): obsidian, notion, google-workspace, ocr, nano-pdf
+- Creative (3): architecture-diagram, sketch, excalidraw
+- Business (3): sales-knowledge-rag, chat-widget, email-auto-responder
+- Testing (2): agent-evaluation-framework, eval-harness
+- Other (6): himalaya, youtube-content, arxiv, open-notebook-rag, native-mcp, webhook-subscriptions
+
+~25 skills, zero tokens in context until needed.
+
+### Tier 3 — Catalog (in `skills/core/skill-catalog/`, always in context)
+A lightweight catalog skill (~150 tokens) lists every vault skill with a one-line description. When the agent sees a task that matches a vault skill, it loads it via `skill_view(name)`.
+
+### Migration
+```bash
+# Create vault
+mkdir -p ~/.hermes/skills-vault/{github,productivity,creative,business,testing,other}
+# Move domain skills
+mv ~/.hermes/skills/github/* ~/.hermes/skills-vault/github/
+# Create catalog skill with skill_manage
+```
+
+### Effect on token budget
+| Tier | Skills | Tokens in context |
+|------|--------|-------------------|
+| Core | ~20 | ~500 |
+| Catalog | 1 | ~150 |
+| Vault | ~25 | 0 (loaded on demand) |
+| **Total** | **~46** | **~650** |
+| vs 118 flat | 118 | ~2750 |
+
+Saves ~2100 tokens per call. The cost: occasional `skill_view()` call (~500 input tokens) when a vault skill is needed in ~10% of tasks.
+
+## Digital Twin / Weekly Backup
+
+Save the complete agent configuration as a recoverable snapshot in the skills repository. This allows full reconstruction from scratch.
+
+### What to back up
+| Component | Source | Why |
+|-----------|--------|-----|
+| SOUL.md | ~/.hermes/SOUL.md | Agent identity and principles |
+| USER.md | ~/.hermes/memories/USER.md | User profile |
+| HERMES.md | ~/.hermes/HERMES.md | Operational Framework |
+| cim-summary.md | ~/.hermes/cim-summary.md | CIM v3.6 |
+| strategic-context.md | ~/.hermes/strategic-context.md | Context |
+| config.yaml | ~/.hermes/config.yaml | Model, toolsets, security |
+| scripts/ | ~/.hermes/scripts/ | Custom scripts |
+
+### Encrypted secrets
+API keys (Exa, etc.) must be stored encrypted since the repo is public:
+```bash
+# Encrypt
+tar czf - -C ~/.hermes .env | \
+  openssl enc -aes-256-cbc -salt -pbkdf2 -pass pass:"PASSWORD" \
+  -out ~/.hermes/skills/hermes-secrets/secrets.tar.gz.enc
+
+# Decrypt
+openssl enc -d -aes-256-cbc -pbkdf2 -pass pass:"PASSWORD" \
+  -in secrets.tar.gz.enc | tar xzf - -C ~/.hermes/
+```
+
+### Cron setup
+```bash
+# Weekly backup (Monday 3:00) — no_agent: true script
+hermes cron create "0 3 * * 1" \
+  --name hermes-weekly-backup \
+  --script hermes-backup-weekly.sh \
+  --no-agent
+```
+
+The script (`~/.hermes/scripts/hermes-backup-weekly.sh`) does everything:
+1. Runs `encrypt-secrets.sh` to re-encrypt keys (Exa + GITHUB_TOKEN)
+2. Copies vault/ from `skills-vault/` into the repo
+3. Copies all config files into `hermes-config/` inside the repo
+4. Copies scripts into `hermes-config/scripts/`
+5. `git add -A && git commit -m "weekly: digital twin snapshot YYYY-MM-DD" && git push`
+
+No daily cron — everything unified into one weekly snapshot.
+
+### Recovery from scratch
+```bash
+git clone git@github.com:USER/Hermes.git ~/.hermes/skills
+cp ~/.hermes/skills/hermes-config/* ~/.hermes/
+openssl enc -d -aes-256-cbc -pbkdf2 \
+  -in ~/.hermes/skills/hermes-secrets/secrets.tar.gz.enc | tar xzf - -C ~/.hermes/
+hermes
+```
+
+## Exa Search Setup
+
+Exa (exa.ai) is an external search API optimized for AI agents. It returns clean search results without browser overhead.
+
+### Setup
+```bash
+# Add key to .env
+echo "export EXA_API_KEY=your_key" >> ~/.hermes/.env
+```
+
+### Usage via curl
+```bash
+curl -s -X POST "https://api.exa.ai/search" \
+  -H "Authorization: Bearer $EXA_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "...", "numResults": 3}'
+```
+
+### When to use
+- Fresh data from the web (news, docs, trends)
+- Library documentation not covered by RAG
+- General lookup when memory and RAG are insufficient
+
+Use it as a third-tier knowledge source: Memory → RAG (Open Notebook) → Exa.
+
+### vs Context7 Plugin
+Exa is a general web search API. Context7 is a Hermes plugin for library documentation specifically. Evaluate per need — Context7 is narrower but structured for docs; Exa is broader but needs manual parsing. Both are optional; browser + web tools cover the same ground with more overhead.
+
+## Depth Modes (Automatic)
+
+Rather than asking the user to choose depth on every task, determine it automatically:
+
+| Signal | Depth | Example |
+|--------|-------|---------|
+| Simple question, known fact | Short | "What time is it?", "Who wrote X?" |
+| Standard task | Standard | "Review this PR", "Write a plan for Y" |
+| Complex, multi-step, high risk | Deep | Architectural decision, new system design |
+| Ambiguous | Ask once | "Нужен быстрый или глубокий разбор?" |
+
+Implementation: embedded in SOUL.md and HERMES.md as "Adaptive Depth".
+
+
+
 ## Plugin Evaluation (Context7)
 
 Context7 is a documentation lookup plugin for Hermes Agent.
@@ -125,9 +273,15 @@ hermes plugins enable context7
 
 ## References
 - `references/context7-plugin.md` — Context7 plugin details (files, tools, usage)
+- `references/skills-organization.md` — Core + Vault + Catalog methodology
+- `references/digital-twin-backup.md` — Weekly backup procedure and cron state
+- `references/exa-setup.md` — Exa search API setup and usage
+- `references/context-files-discovery.md` — AGENTS.md / CLAUDE.md / HERMES.md cross-ecosystem context files
 
 ## Pitfalls
 - **Don't reference Context7/Exa in Knowledge Priority unless actually installed.** Dead references waste tokens and confuse the agent.
 - **Don't put "always start with RAG" in Knowledge Priority.** RAG is a skill — load it when you need it. Pre-loading costs ~200 tokens per call with zero benefit for most tasks.
 - **Don't ask Depth Mode every turn.** Users find it noisy. Default to automatic; offer only when depth is ambiguous.
 - **Don't keep duplicate skills.** Two skills covering the same ground (e.g. `code-review-excellence` + `code-reviewer`) inflate the skills block without adding value. Keep the richer one, archive the other.
+- **Keep reference files in sync with cron changes.** When a cron job is removed or consolidated (`skills-nightly.sh` deleted, daily cron removed), update `references/digital-twin-backup.md` immediately. Stale reference files cause confusion for future sessions.
+- **Encrypted secrets must include ALL keys.** When adding a new API key (e.g. `GITHUB_TOKEN`), add it to `.env` and re-run `encrypt-secrets.sh`. The weekly backup only picks up what's in `.env` at encryption time.
