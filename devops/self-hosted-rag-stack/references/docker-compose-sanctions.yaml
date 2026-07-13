@@ -1,0 +1,24 @@
+# Working docker-compose.yaml for Open WebUI under sanctions
+# ghcr.io blocked → Docker Hub (openwebui/open-webui)
+# HuggingFace blocked → hf-mirror.com
+# No :main tag on Docker Hub → use :latest or :latest-slim
+
+services:
+  open-webui:
+    image: openwebui/open-webui:latest-slim
+    container_name: open-webui
+    restart: unless-stopped
+    ports:
+      - "3000:8080"
+    volumes:
+      - open-webui:/app/backend/data
+    environment:
+      - HF_ENDPOINT=https://hf-mirror.com
+      - WEBUI_MAX_FILE_SIZE=200
+      - ANONYMIZED_TELEMETRY=false
+      - WEBUI_NAME=Hermes Study
+    extra_hosts:
+      - host.docker.internal:host-gateway
+
+volumes:
+  open-webui:

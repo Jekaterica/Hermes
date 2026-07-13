@@ -5,31 +5,22 @@
   - Шаблоны в ~/agents/templates/
   - Скилл: business-agent-architect
   - Статус: шаблоны готовы, поиск клиентов в Крыму
-- **Оптимизация Hermes Agent** (Claude Code reverse engineering)
-  - Изучена архитектура Claude Code (18 глав книги)
-  - Принятые улучшения:
-    - Контроль длины ответа ✅
-    - Еженедельный strategic-context.md ✅
-    - File-based Memory (HERMES.md в проектах) ✅
-    - Error Recovery + Sanitization + Permission + Anti-Loop — ✅
 
 ## Принятые решения
 - SSH для GitHub (токены не работают из-за санкций)
-- Авто-коммит кода в 3:00 (backup.sh для проектов, skills-nightly.sh для скиллов)
-- State-machine архитектура для агентов (как Smarta/CSIA)
+- Цифровой образ Hermes — пн 3:00 (weekly), всё в одном репо Jekaterica/Hermes
+- State-machine архитектура для агентов
 - Цены: 7-200к создание, 1-30к/мес обслуживание (Крым)
 - DeepSeek V4 Flash через OpenRouter — основная модель
+- Error Recovery: 2 retry, Depth Modes: авто, RAG: по требованию
 
 ## Закрытые тупики (не возвращаться)
 - GitHub private repos — заблокированы для Крыма (только public)
 - Fine-grained PAT не могут создавать репо (только push в существующие)
 - Google NotebookLM — блокируется при смене VPN IP
-|- YouTube с VPS — HTTP-доступ заблокирован
 
 ## Goal Velocity (еженедельно, в конце недели)
 - Какие активные цели?
 - Что реально продвинулось?
 - Что тормозит?
 - Какое действие имеет наибольший ROI на следующей неделе?
-
-Метрика: не качество агента, а скорость движения пользователя к его реальным целям.

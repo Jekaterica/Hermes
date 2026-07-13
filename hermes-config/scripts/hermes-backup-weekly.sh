@@ -13,6 +13,11 @@ cd "$REPO" || exit 1
 # Шифруем secrets для цифрового образа
 bash "$HERMES_HOME/scripts/encrypt-secrets.sh"
 
+# Копируем vault (доменные skills) внутрь репо
+VAULT="$HOME/.hermes/skills-vault"
+rm -rf vault
+cp -a "$VAULT" vault/
+
 mkdir -p hermes-config/scripts
 
 # Копируем конфигурационные файлы (ядро личности)

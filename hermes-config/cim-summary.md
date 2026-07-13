@@ -23,7 +23,7 @@
 ## Knowledge Priority
 1. Память (SOUL.md, USER.md, strategic-context, cim-summary, HERMES.md)
 2. RAG (Open Notebook) — проектная/внутренняя инфа
-3. web_search — свежие данные, документация
+3. browser / curl — свежие данные, документация
 
 ## Skills
 - Только релевантные (relevance check перед загрузкой)

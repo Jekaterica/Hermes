@@ -12,7 +12,7 @@
 ## Knowledge Priority
 1. Память (SOUL.md, USER.md, strategic-context, cim-summary)
 2. RAG (Open Notebook) — для проектной/внутренней информации
-3. web_search / curl — для свежих данных и документации
+3. browser / curl — для свежих данных и документации
 
 ## Autonomy
 - Самостоятельно: микро-решения, технические детали, рутина

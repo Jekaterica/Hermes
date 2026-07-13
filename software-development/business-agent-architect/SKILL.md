@@ -1,7 +1,7 @@
 ---
 name: business-agent-architect
 description: "Архитектура и разработка production-grade бизнес-агентов для малого бизнеса. Автоматизация рутины: модерация соцсетей, поддержка клиентов на сайте, CRM, запись, напоминания. Крым-специфика."
-version: 1.2.0
+version: 1.3.0
 author: Oleg (Smarta architect)
 license: MIT
 platforms: [linux]
@@ -205,6 +205,12 @@ MINIMAL_TRANSITIONS = [
 - [ ] **Тест 9:** При любой ошибке — эскалация, а не молчание
 - [ ] **Тест 10:** 10 случайных сценариев пройдены без багов
 
+## Pitfalls (из опыта)
+
+- **Многосоставные сообщения:** Если пользователь задал несколько вопросов или пунктов в одном сообщении — ответить на КАЖДЫЙ явно. Пропущенный пункт воспринимается как игнорирование и подрывает доверие.
+- **Преждевременное действие:** Не начинать писать код/создавать файлы, пока пользователь не подтвердил архитектурное решение. Сначала — анализ, согласование, потом — реализация.
+- **Мёртвый код:** Не писать функции «на вырост». Если функционал не в MVP — его не существует.
+
 ## Ценообразование (Крым, 2026)
 
 | Уровень | Что делает | Создание (₽) | Обслуживание/мес (₽) |
@@ -257,9 +263,41 @@ async def pipeline(input_data):
 - `open-notebook-rag` — интеграция с Open Notebook (векторный поиск по документам клиентов)
 - Больше в процессе — смотри также Antigravity Awesome Skills (1525 SKILL.md совместимых навыков)
 
-## RAG + База знаний (Open Notebook)
+## RAG + База знаний
 
-Для агентов, которые должны отвечать на основе документов, используй **Open Notebook**:
+### Open WebUI (рекомендуемый RAG-инструмент)
+
+Современная замена Open Notebook. Работает как self-hosted NotebookLM: загружай PDF, ссылки YouTube, веб-страницы — задавай вопросы в чате. Строит программы обучения, проводит экзамены по загруженным материалам.
+
+- **Запуск:** Docker Hub (`openwebui/open-webui:main`)
+- **Порт:** 3000 (веб-интерфейс, доступен с телефона через браузер)
+- **LLM:** подключается любая OpenAI-совместимая (OpenRouter / DeepSeek)
+- **YouTube:** встроенная поддержка — вытаскивает транскрипт автоматически
+- **RAG:** встроенная векторизация (не требует отдельной БД)
+- **Особенности:** программа обучения, экзамены по материалам, многоязычность
+
+**Установка:**
+```yaml
+services:
+  open-webui:
+    image: openwebui/open-webui:main
+    container_name: open-webui
+    restart: unless-stopped
+    ports:
+      - "3000:8080"
+    volumes:
+      - open-webui:/app/backend/data
+volumes:
+  open-webui:
+```
+
+**Важно для регионов с блокировками:** ghcr.io может быть недоступен. Docker Hub (`openwebui/open-webui`) — рабочая альтернатива.
+
+**Интеграция с Hermes:** можно кидать PDF/ссылки в Telegram → Hermes добавляет в Open WebUI через API (доступен на 3000 порту).
+
+### Open Notebook (legacy)
+
+Старый RAG-инструмент, по-прежнему доступен:
 
 - **Запуск:** Docker Compose (`/home/oleg/open-notebook/docker-compose.yml`)
 - **API:** `http://localhost:5055`
@@ -270,7 +308,7 @@ async def pipeline(input_data):
 
 Интеграция через skill `open-notebook-rag` (mlops). Поддерживает PDF, URL, аудио, текст.
 
-**6 правил анти-галлюцинации для RAG:**
+**6 правил анти-галлюцинации для RAG (общие для обоих инструментов):**
 1. Retrieve first, answer second — всегда сначала поиск
 2. Не разбивай семантические блоки документов
 3. Используй document embeddings для сохранения структуры
@@ -340,7 +378,7 @@ async def pipeline(input_data):
 - **Авто-коммит раз в сутки (3:00)** через `deploy/backup.sh`: `git add -A` + `commit -m "auto: daily update YYYY-MM-DD"` + `git push`
 - Пустые коммиты не создаются (проверка `git diff --staged --quiet`)
 - БД (.sql.gz) + .env бэкапятся отдельно в `/backups/` (30 дней хранения)
-- **Hermes скиллы** — отдельный репо (`hermes-skills`), та же схема: ночной авто-коммит
+- **Hermes скиллы** — отдельный репо (`Jekaterica/Hermes`), еженедельный бэкап пн 3:00 через `hermes-backup-weekly.sh` (см. skill `hermes-config-tuning` → references/digital-twin-backup.md)
 
 **ВАЖНО (питфолл для ассистента):**
 Олег — архитектор, не daily coder. **Не предлагать «ручные осмысленные коммиты».** Nightly auto-commit фиксирует все изменения за день — это правильный ритм, потому что:
@@ -378,6 +416,7 @@ async def pipeline(input_data):
 ### Настройки GitHub
 - `references/github-setup.md` — пользователь, токены, репозитории, авто-коммит (нюансы fine-grained PAT)
 - `references/exa-research.md` — данные Exa поиска: цены конкурентов, CRM для салонов, платформы AI-агентов в РФ, архитектурные тренды (state machine > giant prompt)
+- `references/freelance-automation-research.md` — исследование автоматизации фриланс-бирж через AI-агентов (fl.ru, kwork, upwork): возможности, сложности, потенциальный заработок
 - `references/github-research.md` — open-source проекты: TGB-Booking, AiogramBotTemplate, nazgool97/salon_bot
 
 ### Бизнес-руководство (для Олега)
